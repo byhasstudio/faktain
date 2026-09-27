@@ -220,11 +220,11 @@
   /* ---------- Efek dramatis: flash, partikel, shake ---------- */
   #fxFlash{
     position:fixed; inset:0; z-index:9998; pointer-events:none; opacity:0;
-    background:radial-gradient(circle at 50% 38%, var(--fx-color, transparent) 0%, transparent 68%);
-    transition:opacity .25s ease;
+    background:var(--fx-color, transparent);
+    transition:opacity .4s ease;
   }
-  #fxFlash.on{opacity:1; animation:fxFlashPulse .9s ease-out forwards;}
-  @keyframes fxFlashPulse{0%{opacity:0;} 12%{opacity:.85;} 100%{opacity:0;}}
+  #fxFlash.on{opacity:1; animation:fxFlashPulse 1.8s cubic-bezier(.16,1,.3,1) forwards;}
+  @keyframes fxFlashPulse{0%{opacity:0;} 8%{opacity:1;} 55%{opacity:.85;} 100%{opacity:0;}}
   #fxParticles{position:fixed; inset:0; z-index:9997; pointer-events:none;}
   .result-card.fx-shake{animation:settleIn .55s var(--ease) both, fxShake .5s ease .05s;}
   @keyframes fxShake{
@@ -497,12 +497,12 @@
   // FX: flash warna background sekilas
   // ============================================
   const fxFlashEl = document.getElementById("fxFlash");
-  const VERDICT_FLASH_COLOR = { hoaks:"rgba(226,104,95,0.35)", valid:"rgba(95,184,148,0.32)", tidak_pasti:"rgba(217,165,75,0.30)" };
+  const VERDICT_FLASH_COLOR = { hoaks:"rgba(194,72,61,0.16)", valid:"rgba(47,143,91,0.15)", tidak_pasti:"rgba(177,121,31,0.15)" };
   function flashBackground(verdict){
     fxFlashEl.style.setProperty("--fx-color", VERDICT_FLASH_COLOR[verdict] || VERDICT_FLASH_COLOR.tidak_pasti);
     fxFlashEl.classList.remove("on"); void fxFlashEl.offsetWidth;
     fxFlashEl.classList.add("on");
-    setTimeout(()=> fxFlashEl.classList.remove("on"), 950);
+    setTimeout(()=> fxFlashEl.classList.remove("on"), 1850);
   }
 
   // ============================================
