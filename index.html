@@ -217,8 +217,35 @@
 
   :focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
 
+  /* ---------- Efek dramatis: flash, partikel, shake ---------- */
+  #fxFlash{
+    position:fixed; inset:0; z-index:9998; pointer-events:none; opacity:0;
+    background:radial-gradient(circle at 50% 38%, var(--fx-color, transparent) 0%, transparent 68%);
+    transition:opacity .25s ease;
+  }
+  #fxFlash.on{opacity:1; animation:fxFlashPulse .9s ease-out forwards;}
+  @keyframes fxFlashPulse{0%{opacity:0;} 12%{opacity:.85;} 100%{opacity:0;}}
+  #fxParticles{position:fixed; inset:0; z-index:9997; pointer-events:none;}
+  .result-card.fx-shake{animation:settleIn .55s var(--ease) both, fxShake .5s ease .05s;}
+  @keyframes fxShake{
+    0%,100%{transform:translateX(0);} 15%{transform:translateX(-6px);} 30%{transform:translateX(5px);}
+    45%{transform:translateX(-4px);} 60%{transform:translateX(3px);} 75%{transform:translateX(-2px);} 90%{transform:translateX(1px);}
+  }
+  .result-card.fx-lift{animation:settleIn .55s var(--ease) both, fxLift .7s var(--ease) .05s;}
+  @keyframes fxLift{0%{filter:brightness(1);} 30%{filter:brightness(1.18);} 100%{filter:brightness(1);}}
+  .speak-btn{
+    display:inline-flex; align-items:center; gap:6px; margin-left:auto;
+    padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:var(--surface-2);
+    color:var(--text-2); font-size:12px; font-weight:500; cursor:pointer;
+    transition:background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease);
+  }
+  .speak-btn:hover{color:var(--text); border-color:var(--line-strong);}
+  .speak-btn.speaking{color:var(--verdict); border-color:color-mix(in srgb, var(--verdict) 45%, transparent); background:var(--verdict-soft);}
+  .speak-btn svg{width:13px; height:13px; flex-shrink:0;}
+
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+    #fxFlash, #fxParticles{display:none !important;}
   }
 </style>
 </head>
@@ -280,6 +307,8 @@
 
   <footer>Faktain &middot; dibuat untuk membantu menyaring informasi dengan lebih tenang</footer>
 </div>
+<div id="fxFlash"></div>
+<canvas id="fxParticles"></canvas>
 
 <script>
 (function(){
@@ -349,19 +378,195 @@
 
   const VERDICT_LABEL = { hoaks:"Terindikasi hoaks", valid:"Tampak valid", tidak_pasti:"Belum pasti" };
 
-  function renderResult(item){
+  // ============================================
+  // FX: audio (Web Audio API, synthesized, tanpa file eksternal)
+  // ============================================
+  const FX = (function(){
+    let ctx = null;
+    let tickTimer = null;
+    function getCtx(){
+      if(!ctx){
+        try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ ctx = null; }
+      }
+      if(ctx && ctx.state === "suspended") ctx.resume().catch(()=>{});
+      return ctx;
+    }
+
+    function tone(freq, startAt, dur, type, gainPeak, opts){
+      const ac = getCtx(); if(!ac) return;
+      opts = opts || {};
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = type || "sine";
+      osc.frequency.setValueAtTime(freq, startAt);
+      if(opts.slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(opts.slideTo,1), startAt + dur);
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(gainPeak, startAt + Math.min(0.02, dur*0.25));
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
+      osc.connect(gain).connect(ac.destination);
+      osc.start(startAt); osc.stop(startAt + dur + 0.02);
+    }
+
+    // Tik halus berulang selama proses "menganalisis"
+    function startThinking(){
+      const ac = getCtx(); if(!ac) return;
+      stopThinking();
+      let i = 0;
+      tickTimer = setInterval(()=>{
+        const t = ac.currentTime;
+        tone(i % 2 === 0 ? 1180 : 950, t, 0.045, "square", 0.025);
+        i++;
+      }, 260);
+    }
+    function stopThinking(){
+      if(tickTimer){ clearInterval(tickTimer); tickTimer = null; }
+    }
+
+    // Bunyi "impact" berbeda karakter per verdict
+    function playVerdictSound(verdict){
+      const ac = getCtx(); if(!ac) return;
+      const t = ac.currentTime;
+      if(verdict === "hoaks"){
+        tone(196, t, 0.22, "sawtooth", 0.09, {slideTo:110});
+        tone(98, t+0.03, 0.30, "square", 0.07);
+        tone(146, t+0.10, 0.18, "sawtooth", 0.05, {slideTo:90});
+      } else if(verdict === "valid"){
+        tone(523.25, t, 0.16, "sine", 0.08);
+        tone(659.25, t+0.09, 0.18, "sine", 0.08);
+        tone(783.99, t+0.18, 0.30, "sine", 0.09);
+      } else {
+        tone(440, t, 0.16, "triangle", 0.07);
+        tone(415, t+0.14, 0.22, "triangle", 0.06);
+      }
+    }
+    return { startThinking, stopThinking, playVerdictSound, getCtx };
+  })();
+
+  // ============================================
+  // FX: partikel canvas (meledak sebentar lalu hilang)
+  // ============================================
+  const particleCanvas = document.getElementById("fxParticles");
+  const pCtx = particleCanvas.getContext("2d");
+  function resizeCanvas(){
+    particleCanvas.width = window.innerWidth * devicePixelRatio;
+    particleCanvas.height = window.innerHeight * devicePixelRatio;
+    particleCanvas.style.width = window.innerWidth + "px";
+    particleCanvas.style.height = window.innerHeight + "px";
+    pCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  const VERDICT_PARTICLE_COLOR = { hoaks:["#e2685f","#c2483d","#f0958c"], valid:["#5fb894","#2f8f5b","#8fd6b8"], tidak_pasti:["#d9a54b","#b1791f","#e8c27f"] };
+
+  function burstParticles(verdict){
+    const colors = VERDICT_PARTICLE_COLOR[verdict] || VERDICT_PARTICLE_COLOR.tidak_pasti;
+    const cx = window.innerWidth/2, cy = Math.min(220, window.innerHeight*0.28);
+    const n = 46;
+    const parts = [];
+    for(let i=0;i<n;i++){
+      const angle = (Math.PI*2*i)/n + Math.random()*0.4;
+      const speed = 2.2 + Math.random()*3.4;
+      parts.push({
+        x:cx, y:cy,
+        vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed - 1.2,
+        r:2 + Math.random()*3, life:1, decay:0.012 + Math.random()*0.012,
+        color: colors[i % colors.length]
+      });
+    }
+    let raf;
+    function step(){
+      pCtx.clearRect(0,0,window.innerWidth, window.innerHeight);
+      let alive = false;
+      for(const p of parts){
+        if(p.life <= 0) continue;
+        alive = true;
+        p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.life -= p.decay;
+        pCtx.globalAlpha = Math.max(p.life,0);
+        pCtx.fillStyle = p.color;
+        pCtx.beginPath(); pCtx.arc(p.x, p.y, p.r, 0, Math.PI*2); pCtx.fill();
+      }
+      pCtx.globalAlpha = 1;
+      if(alive) raf = requestAnimationFrame(step);
+      else pCtx.clearRect(0,0,window.innerWidth, window.innerHeight);
+    }
+    step();
+  }
+
+  // ============================================
+  // FX: flash warna background sekilas
+  // ============================================
+  const fxFlashEl = document.getElementById("fxFlash");
+  const VERDICT_FLASH_COLOR = { hoaks:"rgba(226,104,95,0.35)", valid:"rgba(95,184,148,0.32)", tidak_pasti:"rgba(217,165,75,0.30)" };
+  function flashBackground(verdict){
+    fxFlashEl.style.setProperty("--fx-color", VERDICT_FLASH_COLOR[verdict] || VERDICT_FLASH_COLOR.tidak_pasti);
+    fxFlashEl.classList.remove("on"); void fxFlashEl.offsetWidth;
+    fxFlashEl.classList.add("on");
+    setTimeout(()=> fxFlashEl.classList.remove("on"), 950);
+  }
+
+  // ============================================
+  // FX: text-to-speech (Web Speech API bawaan browser)
+  // ============================================
+  function speakVerdict(item){
+    if(!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const label = VERDICT_LABEL[item.verdict] || item.verdict;
+    const text = `${label}. Tingkat keyakinan ${item.confidence}. ${item.ringkasan || item.penjelasan || ""}`;
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = "id-ID";
+    utt.rate = 1.0; utt.pitch = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const idVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith("id"));
+    if(idVoice) utt.voice = idVoice;
+    window.speechSynthesis.speak(utt);
+    return utt;
+  }
+
+  function triggerVerdictFx(item){
+    FX.playVerdictSound(item.verdict);
+    flashBackground(item.verdict);
+    burstParticles(item.verdict);
+  }
+
+  function renderResult(item, opts){
+    opts = opts || {};
     const badgeClass = item.verdict;
+    const shakeClass = item.verdict === "hoaks" ? "fx-shake" : (item.verdict === "valid" ? "fx-lift" : "");
     resultArea.innerHTML = `
-      <div class="result-card ${badgeClass}">
+      <div class="result-card ${badgeClass} ${shakeClass}">
         <div class="verdict-row">
           <span class="verdict-badge"><span class="dot"></span>${VERDICT_LABEL[item.verdict] || item.verdict}</span>
           <span class="confidence-tag">Keyakinan: ${escapeHtml(item.confidence)}</span>
+          <button class="speak-btn" id="speakBtn" type="button" title="Dengarkan hasil">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M17 9a4 4 0 010 6"/><path d="M19.5 6.5a8 8 0 010 11"/></svg>
+            <span id="speakBtnLabel">Dengarkan</span>
+          </button>
         </div>
         ${item.ringkasan ? `<div class="result-section"><h4>Ringkasan</h4><p>${escapeHtml(item.ringkasan)}</p></div>` : ""}
         <div class="result-section"><h4>Penjelasan</h4><p>${escapeHtml(item.penjelasan)}</p></div>
         ${item.redFlags && item.redFlags.length ? `<div class="result-section"><h4>Ciri mencurigakan</h4><ul class="redflag-list">${item.redFlags.map(f=>`<li>${escapeHtml(f)}</li>`).join("")}</ul></div>` : ""}
         ${item.saran ? `<div class="result-section"><h4>Saran verifikasi</h4><p>${escapeHtml(item.saran)}</p></div>` : ""}
       </div>`;
+
+    const speakBtn = document.getElementById("speakBtn");
+    const speakLabel = document.getElementById("speakBtnLabel");
+    speakBtn.addEventListener("click", ()=>{
+      if(window.speechSynthesis.speaking){
+        window.speechSynthesis.cancel();
+        speakBtn.classList.remove("speaking"); speakLabel.textContent = "Dengarkan";
+        return;
+      }
+      const utt = speakVerdict(item);
+      if(!utt) return;
+      speakBtn.classList.add("speaking"); speakLabel.textContent = "Berhenti";
+      utt.onend = ()=>{ speakBtn.classList.remove("speaking"); speakLabel.textContent = "Dengarkan"; };
+    });
+
+    if(opts.fresh){
+      triggerVerdictFx(item);
+      speakVerdict(item);
+    }
   }
 
   function renderHistory(items){
@@ -388,6 +593,7 @@
   }
 
   submitBtn.addEventListener("click", async ()=>{
+    FX.getCtx(); // buka AudioContext dalam gestur klik user (kebijakan autoplay browser)
     const payload = { action:"analyze", deviceId: deviceId, inputType: inputType };
     if(inputType === "text"){
       const t = textInput.value.trim();
@@ -401,19 +607,21 @@
     submitBtn.disabled = true;
     statusRow.classList.add("show");
     resultArea.innerHTML = "";
+    FX.startThinking();
     try{
       const data = await callBackend(payload);
       if(data.error){
         resultArea.innerHTML = `<div class="error-box">${escapeHtml(data.error)}</div>`;
         return;
       }
-      renderResult(data.result);
+      renderResult(data.result, { fresh: true });
       if(data.quota) quotaHint.textContent = `${data.quota.checksUsed}/${data.quota.checksLimit} per jam`;
       loadHistory();
       textInput.value = ""; urlInput.value = "";
     }catch(err){
       resultArea.innerHTML = `<div class="error-box">Gagal menghubungi server: ${escapeHtml(err.message || "tidak diketahui")}</div>`;
     }finally{
+      FX.stopThinking();
       submitBtn.disabled = false;
       statusRow.classList.remove("show");
     }
