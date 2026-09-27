@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Faktain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f5f8; --bg-soft:#ffffff; --surface:#ffffff; --surface-2:#eef0f5;
+    --text:#12141c; --text-2:#5b5f6d; --text-3:#8b8f9c;
+    --line:#e2e4ea; --line-strong:#cdd0da;
+    --navy:#152447; --navy-2:#0d1830;
+    --gold:#a9843f; --gold-soft:rgba(169,132,63,0.10);
+    --verdict:#a9843f; --verdict-soft:rgba(169,132,63,0.10); --verdict-ring:rgba(169,132,63,0.22);
+    --danger:#c2483d; --danger-soft:rgba(194,72,61,0.08); --danger-text:#a53c32;
+    --good:#2f8f5b; --good-soft:rgba(47,143,91,0.08); --good-text:#22754a;
+    --warn:#b1791f; --warn-soft:rgba(177,121,31,0.09); --warn-text:#93630f;
+    --shadow-sm:0 1px 2px rgba(15,20,35,0.04), 0 1px 1px rgba(15,20,35,0.03);
+    --shadow-md:0 8px 24px -8px rgba(15,20,35,0.10), 0 2px 8px -2px rgba(15,20,35,0.06);
+    --shadow-lg:0 24px 48px -16px rgba(15,20,35,0.16), 0 4px 12px -4px rgba(15,20,35,0.08);
+    --serif:'Source Serif 4', Georgia, serif;
+    --sans:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  [data-theme="dark"]{
+    --bg:#0b0e14; --bg-soft:#0f131b; --surface:#12161f; --surface-2:#171c27;
+    --text:#eef0f5; --text-2:#a2a7b5; --text-3:#6c7181;
+    --line:#232837; --line-strong:#2f3547;
+    --navy:#1c2c52; --navy-2:#0d1830;
+    --gold:#c9a86a; --gold-soft:rgba(201,168,106,0.12);
+    --verdict:#c9a86a; --verdict-soft:rgba(201,168,106,0.10); --verdict-ring:rgba(201,168,106,0.2);
+    --danger:#e2685f; --danger-soft:rgba(226,104,95,0.12); --danger-text:#f0958c;
+    --good:#5fb894; --good-soft:rgba(95,184,148,0.12); --good-text:#8fd6b8;
+    --warn:#d9a54b; --warn-soft:rgba(217,165,75,0.12); --warn-text:#e8c27f;
+    --shadow-sm:0 1px 2px rgba(0,0,0,0.2);
+    --shadow-md:0 8px 24px -8px rgba(0,0,0,0.45);
+    --shadow-lg:0 24px 48px -16px rgba(0,0,0,0.55);
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0; font-family:var(--sans); color:var(--text); background:var(--bg);
+    -webkit-font-smoothing:antialiased; transition:background .35s var(--ease), color .35s var(--ease);
+  }
+  .shell{max-width:760px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; padding-bottom:calc(40px + env(safe-area-inset-bottom,0px));}
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:22px 24px; padding-top:calc(22px + env(safe-area-inset-top,0px));
+    border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:20;
+    background:color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter:blur(10px) saturate(1.4);
+    transition:border-color .35s var(--ease), background .35s var(--ease);
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand .mark{
+    width:36px; height:36px; border-radius:10px; flex-shrink:0;
+    background:linear-gradient(155deg, var(--navy), var(--navy-2));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), var(--shadow-sm);
+  }
+  .brand .mark svg{width:18px; height:18px;}
+  .brand .titles{line-height:1.2;}
+  .brand .titles .t1{font-family:var(--serif); font-weight:600; font-size:17px; letter-spacing:-0.005em;}
+  .brand .titles .t2{font-size:11px; color:var(--text-3); margin-top:1px; letter-spacing:.01em;}
+
+  .theme-toggle{
+    display:flex; align-items:center; background:var(--surface-2); border:1px solid var(--line);
+    border-radius:999px; padding:3px; gap:2px; position:relative;
+  }
+  .theme-toggle button{
+    width:30px; height:26px; border:none; background:transparent; border-radius:999px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-3);
+    position:relative; z-index:1; transition:color .3s var(--ease);
+  }
+  .theme-toggle button.active{color:var(--text);}
+  .theme-toggle svg{width:14px; height:14px;}
+  .theme-pill{
+    position:absolute; top:3px; left:3px; width:30px; height:26px; border-radius:999px;
+    background:var(--surface); box-shadow:var(--shadow-sm); border:1px solid var(--line);
+    transition:transform .35s var(--ease);
+  }
+  [data-mode="dark"] .theme-pill{transform:translateX(30px);}
+
+  /* ---------- Main ---------- */
+  main{flex:1; padding:0 24px; display:flex; flex-direction:column; gap:26px;}
+
+  .hero{padding:34px 0 2px; animation:riseIn .6s var(--ease) both;}
+  .hero .eyebrow{
+    font-size:11.5px; font-weight:600; color:var(--gold); letter-spacing:.06em;
+    display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .hero .eyebrow::before{content:""; width:16px; height:1px; background:var(--gold);}
+  .hero h1{margin:0; font-family:var(--serif); font-weight:600; font-size:30px; line-height:1.25; letter-spacing:-0.01em; max-width:22ch;}
+  .hero p{margin:12px 0 0; font-size:14.5px; color:var(--text-2); line-height:1.65; max-width:46ch;}
+
+  .card{
+    border:1px solid var(--line); border-radius:16px; background:var(--surface);
+    box-shadow:var(--shadow-sm); transition:border-color .35s var(--ease), background .35s var(--ease), box-shadow .35s var(--ease);
+  }
+
+  .input-card{padding:22px; animation:riseIn .6s var(--ease) .08s both;}
+  .type-toggle{display:flex; gap:4px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:4px; width:fit-content; margin-bottom:16px;}
+  .type-opt{
+    padding:8px 16px; border-radius:7px; font-size:13px; font-weight:500; cursor:pointer;
+    color:var(--text-2); transition:color .25s var(--ease), background .3s var(--ease); user-select:none;
+  }
+  .type-opt.active{background:var(--navy); color:#fff;}
+  [data-theme="dark"] .type-opt.active{background:var(--surface); color:var(--text); box-shadow:var(--shadow-sm); border:1px solid var(--line-strong);}
+
+  textarea, .url-input{
+    width:100%; border:1px solid var(--line); border-radius:12px; padding:14px 15px;
+    font-size:14.5px; font-family:var(--sans); background:var(--bg-soft); color:var(--text);
+    resize:vertical; transition:border-color .25s var(--ease), box-shadow .25s var(--ease), background .35s var(--ease);
+  }
+  textarea::placeholder, .url-input::placeholder{color:var(--text-3);}
+  textarea:focus, .url-input:focus{outline:none; border-color:var(--navy); box-shadow:0 0 0 3px var(--gold-soft);}
+  [data-theme="dark"] textarea:focus, [data-theme="dark"] .url-input:focus{border-color:var(--line-strong);}
+  textarea{min-height:128px; line-height:1.6;}
+
+  .submit-row{display:flex; justify-content:space-between; align-items:center; margin-top:16px; gap:10px; flex-wrap:wrap;}
+  .quota-hint{font-size:11.5px; color:var(--text-3); font-variant-numeric:tabular-nums;}
+  .submit-btn{
+    padding:12px 26px; border:none; border-radius:11px;
+    background:var(--navy); color:#fff; font-weight:600; font-size:14px; cursor:pointer;
+    box-shadow:var(--shadow-sm);
+    transition:transform .3s var(--ease), box-shadow .3s var(--ease), opacity .2s ease, background .3s ease;
+  }
+  .submit-btn:disabled{opacity:.5; cursor:default; box-shadow:none; transform:none;}
+  .submit-btn:hover:not(:disabled){transform:translateY(-1px); box-shadow:var(--shadow-md);}
+  .submit-btn:active:not(:disabled){transform:translateY(0);}
+
+  .status-row{
+    display:flex; align-items:center; gap:10px; color:var(--text-2); font-size:13px;
+    max-height:0; opacity:0; overflow:hidden;
+    transition:max-height .4s var(--ease), opacity .3s ease, margin-top .4s ease;
+  }
+  .status-row.show{max-height:40px; opacity:1; margin-top:16px;}
+  .spinner{
+    width:15px; height:15px; border-radius:50%; flex-shrink:0;
+    border:2px solid var(--line); border-top-color:var(--gold);
+    animation:spin 0.85s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes riseIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+  @keyframes settleIn{0%{opacity:0; transform:translateY(14px) scale(.985);} 100%{opacity:1; transform:translateY(0) scale(1);}}
+  @keyframes ringPulse{0%{box-shadow:0 0 0 0 var(--verdict-ring);} 100%{box-shadow:0 0 0 14px rgba(0,0,0,0);}}
+
+  /* ---------- Result ---------- */
+  .result-card{
+    border-radius:16px; padding:24px; position:relative; overflow:hidden;
+    background:var(--surface); border:1px solid var(--line);
+    box-shadow:var(--shadow-lg);
+    animation:settleIn .55s var(--ease) both;
+    transition:border-color .5s var(--ease), background .35s var(--ease);
+  }
+  .result-card::before{
+    content:""; position:absolute; inset:0 0 auto 0; height:3px;
+    background:var(--verdict); transition:background .5s ease;
+  }
+  .result-card.hoaks{--verdict:var(--danger); --verdict-soft:var(--danger-soft); --verdict-ring:rgba(194,72,61,0.22); border-color:color-mix(in srgb, var(--danger) 30%, var(--line));}
+  .result-card.valid{--verdict:var(--good); --verdict-soft:var(--good-soft); --verdict-ring:rgba(47,143,91,0.22); border-color:color-mix(in srgb, var(--good) 30%, var(--line));}
+  .result-card.tidak_pasti{--verdict:var(--warn); --verdict-soft:var(--warn-soft); --verdict-ring:rgba(177,121,31,0.22); border-color:color-mix(in srgb, var(--warn) 30%, var(--line));}
+
+  .verdict-row{display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:4px;}
+  .verdict-badge{
+    display:inline-flex; align-items:center; gap:7px; padding:7px 15px; border-radius:999px;
+    font-size:13px; font-weight:600; color:var(--verdict); background:var(--verdict-soft);
+    border:1px solid color-mix(in srgb, var(--verdict) 45%, transparent);
+    animation:ringPulse 1.1s ease-out .1s both;
+  }
+  .result-card.hoaks .verdict-badge{color:var(--danger-text);}
+  .result-card.valid .verdict-badge{color:var(--good-text);}
+  .result-card.tidak_pasti .verdict-badge{color:var(--warn-text);}
+  .verdict-badge .dot{width:6px; height:6px; border-radius:50%; background:var(--verdict);}
+  .confidence-tag{font-size:12px; color:var(--text-3);}
+
+  .result-section{margin-top:18px; animation:riseIn .5s var(--ease) both;}
+  .result-section:nth-of-type(1){animation-delay:.05s;}
+  .result-section:nth-of-type(2){animation-delay:.1s;}
+  .result-section:nth-of-type(3){animation-delay:.15s;}
+  .result-section:nth-of-type(4){animation-delay:.2s;}
+  .result-section h4{margin:0 0 6px; font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:.07em; font-weight:600;}
+  .result-section p{margin:0; font-size:14.5px; line-height:1.7; color:var(--text);}
+  .redflag-list{margin:2px 0 0; padding-left:19px; font-size:14px; line-height:1.8; color:var(--text);}
+  .redflag-list li::marker{color:var(--verdict);}
+
+  .error-box{
+    background:var(--danger-soft); border:1px solid color-mix(in srgb, var(--danger) 30%, transparent); color:var(--danger-text);
+    padding:15px 17px; border-radius:13px; font-size:13.5px; line-height:1.55;
+    animation:riseIn .3s var(--ease) both;
+  }
+
+  .section-title{font-size:12.5px; font-weight:600; color:var(--text-3); letter-spacing:.02em; margin:2px 2px 0;}
+  .history-list{display:flex; flex-direction:column; gap:9px; margin-top:10px;}
+  .history-item{
+    border:1px solid var(--line); border-radius:13px; padding:14px 16px; cursor:pointer; font-size:13px;
+    background:var(--surface);
+    transition:transform .25s var(--ease), border-color .25s var(--ease), box-shadow .25s var(--ease);
+  }
+  .history-item:hover{transform:translateY(-1px); border-color:var(--line-strong); box-shadow:var(--shadow-sm);}
+  .history-item .h-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; gap:10px;}
+  .history-item .h-input{color:var(--text); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.88;}
+  .h-date{color:var(--text-3); font-size:11px; font-variant-numeric:tabular-nums;}
+  .mini-badge{font-size:10.5px; font-weight:600; padding:3px 10px; border-radius:999px; flex-shrink:0;}
+  .mini-badge.hoaks{background:var(--danger-soft); color:var(--danger-text);}
+  .mini-badge.valid{background:var(--good-soft); color:var(--good-text);}
+  .mini-badge.tidak_pasti{background:var(--warn-soft); color:var(--warn-text);}
+  .empty-hint{font-size:13px; color:var(--text-3); padding:22px; text-align:center; border:1px dashed var(--line); border-radius:13px;}
+
+  footer{padding:24px 24px 4px; text-align:center; font-size:11.5px; color:var(--text-3);}
+
+  :focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10.5" cy="10.5" r="6.5" stroke="#c9a86a" stroke-width="1.6"/>
+          <path d="M15.2 15.2L20 20" stroke="#c9a86a" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M8 10.5L10 12.5L13.5 8" stroke="#c9a86a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="titles">
+        <div class="t1">Faktain</div>
+        <div class="t2">Penilaian kredibilitas berita</div>
+      </div>
+    </div>
+    <div class="theme-toggle" id="themeToggle">
+      <div class="theme-pill"></div>
+      <button data-mode="light" class="active" title="Mode terang" aria-label="Mode terang">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>
+      </button>
+      <button data-mode="dark" title="Mode gelap" aria-label="Mode gelap">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.4 14.7A8.3 8.3 0 019.3 3.6a8.7 8.7 0 108.8 13.5 8.4 8.4 0 002.3-2.4z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="eyebrow">Verifikasi bertenaga smart</div>
+      <h1>Ragu dengan sebuah kabar?</h1>
+      <p>Tempel teksnya atau tautan artikel — biarkan sistem smart menimbang ciri-cirinya sebelum kamu percaya atau membagikannya.</p>
+    </div>
+
+    <div class="card input-card">
+      <div class="type-toggle">
+        <div class="type-opt active" id="typeText">Teks</div>
+        <div class="type-opt" id="typeUrl">Tautan URL</div>
+      </div>
+      <textarea id="textInput" placeholder="Tempel isi berita atau teks yang ingin diperiksa..."></textarea>
+      <input type="url" class="url-input" id="urlInput" placeholder="https://contoh-berita.com/artikel" style="display:none;">
+      <div class="submit-row">
+        <span class="quota-hint" id="quotaHint"></span>
+        <button class="submit-btn" id="submitBtn">Periksa sekarang</button>
+      </div>
+      <div class="status-row" id="statusRow"><div class="spinner"></div><span>Menganalisis secara smart...</span></div>
+    </div>
+
+    <div id="resultArea"></div>
+
+    <div>
+      <div class="section-title">Riwayat pemeriksaan</div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </main>
+
+  <footer>Faktain &middot; dibuat untuk membantu menyaring informasi dengan lebih tenang</footer>
+</div>
+
+<script>
+(function(){
+  const BACKEND_URL = "https://script.google.com/macros/s/AKfycbyPUqd1u2yTCvXmyB8y50QawsDRAm3QwwduJi-GmZs2K-jJOuGpxKLeijPS4WNXtvmr/exec";
+
+  const typeText = document.getElementById("typeText");
+  const typeUrl = document.getElementById("typeUrl");
+  const textInput = document.getElementById("textInput");
+  const urlInput = document.getElementById("urlInput");
+  const submitBtn = document.getElementById("submitBtn");
+  const statusRow = document.getElementById("statusRow");
+  const resultArea = document.getElementById("resultArea");
+  const historyList = document.getElementById("historyList");
+  const quotaHint = document.getElementById("quotaHint");
+  const themeToggle = document.getElementById("themeToggle");
+
+  const DEVICE_KEY = "cekfakta_device_id";
+  const THEME_KEY = "cekfakta_theme";
+  let inputType = "text";
+
+  // ---------- deviceId (pengganti login) ----------
+  function getDeviceId(){
+    try{
+      let id = localStorage.getItem(DEVICE_KEY);
+      if(!id){
+        id = "dev-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,12);
+        localStorage.setItem(DEVICE_KEY, id);
+      }
+      return id;
+    }catch(e){
+      return "anon";
+    }
+  }
+  const deviceId = getDeviceId();
+
+  // ---------- tema ----------
+  function applyTheme(mode){
+    document.documentElement.setAttribute("data-theme", mode);
+    document.documentElement.setAttribute("data-mode", mode);
+    themeToggle.querySelectorAll("button").forEach(b=> b.classList.toggle("active", b.dataset.mode === mode));
+  }
+  function initTheme(){
+    let mode = "light";
+    try{
+      mode = localStorage.getItem(THEME_KEY) || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    }catch(e){}
+    applyTheme(mode);
+  }
+  themeToggle.addEventListener("click", (e)=>{
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const mode = btn.dataset.mode;
+    applyTheme(mode);
+    try{ localStorage.setItem(THEME_KEY, mode); }catch(e){}
+  });
+
+  typeText.addEventListener("click", ()=>{ inputType="text"; typeText.classList.add("active"); typeUrl.classList.remove("active"); textInput.style.display="block"; urlInput.style.display="none"; });
+  typeUrl.addEventListener("click", ()=>{ inputType="url"; typeUrl.classList.add("active"); typeText.classList.remove("active"); textInput.style.display="none"; urlInput.style.display="block"; });
+
+  function escapeHtml(s){ const d=document.createElement("div"); d.textContent = s==null?"":String(s); return d.innerHTML; }
+
+  async function callBackend(payload){
+    const res = await fetch(BACKEND_URL, { method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify(payload) });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  }
+
+  const VERDICT_LABEL = { hoaks:"Terindikasi hoaks", valid:"Tampak valid", tidak_pasti:"Belum pasti" };
+
+  function renderResult(item){
+    const badgeClass = item.verdict;
+    resultArea.innerHTML = `
+      <div class="result-card ${badgeClass}">
+        <div class="verdict-row">
+          <span class="verdict-badge"><span class="dot"></span>${VERDICT_LABEL[item.verdict] || item.verdict}</span>
+          <span class="confidence-tag">Keyakinan: ${escapeHtml(item.confidence)}</span>
+        </div>
+        ${item.ringkasan ? `<div class="result-section"><h4>Ringkasan</h4><p>${escapeHtml(item.ringkasan)}</p></div>` : ""}
+        <div class="result-section"><h4>Penjelasan</h4><p>${escapeHtml(item.penjelasan)}</p></div>
+        ${item.redFlags && item.redFlags.length ? `<div class="result-section"><h4>Ciri mencurigakan</h4><ul class="redflag-list">${item.redFlags.map(f=>`<li>${escapeHtml(f)}</li>`).join("")}</ul></div>` : ""}
+        ${item.saran ? `<div class="result-section"><h4>Saran verifikasi</h4><p>${escapeHtml(item.saran)}</p></div>` : ""}
+      </div>`;
+  }
+
+  function renderHistory(items){
+    if(!items || !items.length){ historyList.innerHTML = `<div class="empty-hint">Belum ada riwayat pemeriksaan.</div>`; return; }
+    historyList.innerHTML = items.map((it,idx)=>`
+      <div class="history-item" data-idx="${idx}">
+        <div class="h-top">
+          <span class="h-input">${escapeHtml(it.input || "")}</span>
+          <span class="mini-badge ${it.verdict}">${(it.verdict||"").replace("_"," ")}</span>
+        </div>
+        <div class="h-date">${new Date(it.createdAt).toLocaleString("id-ID")}</div>
+      </div>`).join("");
+    historyList.querySelectorAll(".history-item").forEach(el=>{
+      el.addEventListener("click", ()=> { renderResult(items[Number(el.dataset.idx)]); resultArea.scrollIntoView({behavior:"smooth", block:"start"}); });
+    });
+  }
+
+  async function loadHistory(){
+    try{
+      const data = await callBackend({ action:"getHistory", deviceId: deviceId });
+      if(data.error) return;
+      renderHistory(data.items || []);
+    }catch(e){}
+  }
+
+  submitBtn.addEventListener("click", async ()=>{
+    const payload = { action:"analyze", deviceId: deviceId, inputType: inputType };
+    if(inputType === "text"){
+      const t = textInput.value.trim();
+      if(!t){ alert("Tempel teks berita dulu."); return; }
+      payload.text = t;
+    } else {
+      const u = urlInput.value.trim();
+      if(!u){ alert("Isi tautan URL berita dulu."); return; }
+      payload.url = u;
+    }
+    submitBtn.disabled = true;
+    statusRow.classList.add("show");
+    resultArea.innerHTML = "";
+    try{
+      const data = await callBackend(payload);
+      if(data.error){
+        resultArea.innerHTML = `<div class="error-box">${escapeHtml(data.error)}</div>`;
+        return;
+      }
+      renderResult(data.result);
+      if(data.quota) quotaHint.textContent = `${data.quota.checksUsed}/${data.quota.checksLimit} per jam`;
+      loadHistory();
+      textInput.value = ""; urlInput.value = "";
+    }catch(err){
+      resultArea.innerHTML = `<div class="error-box">Gagal menghubungi server: ${escapeHtml(err.message || "tidak diketahui")}</div>`;
+    }finally{
+      submitBtn.disabled = false;
+      statusRow.classList.remove("show");
+    }
+  });
+
+  function init(){
+    initTheme();
+    loadHistory();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
